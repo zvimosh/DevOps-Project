@@ -29,6 +29,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
@@ -48,11 +49,11 @@ jobs:
         # Get the DB password from the secrets store
         echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
         # Build the images
-        docker buildx bake --push
-        #docker push $ECR_REGISTRY/react-backend:1.0.0
-        #docker push $ECR_REGISTRY/react-backend:latest
-        #docker push $ECR_REGISTRY/react-frontend:1.0.0
-        #docker push $ECR_REGISTRY/react-frontend:latest
+        docker buildx bake --load
+        docker push $ECR_REGISTRY/react-backend:1.0.0
+        docker push $ECR_REGISTRY/react-backend:latest
+        docker push $ECR_REGISTRY/react-frontend:1.0.0
+        docker push $ECR_REGISTRY/react-frontend:latest
         #echo "$GITHUB_OUTPUT"
     
     # - name : create kops cluster
