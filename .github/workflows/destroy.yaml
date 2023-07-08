@@ -36,9 +36,9 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+    # - name: Login to Amazon ECR
+    #   id: login-ecr
+    #   uses: aws-actions/amazon-ecr-login@v1
 
     - name: install kops
       run: |
@@ -59,7 +59,7 @@ jobs:
         export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
 
         # delete kops cluster
-        kops delete cluster --name ${NAME} --yes
+        kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
 
 
 
