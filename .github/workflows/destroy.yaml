@@ -45,10 +45,10 @@ jobs:
         # export KOPS env variables
         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
-        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
-        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
-        #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
-        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+        #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
 
         # delete kops cluster
         kops delete cluster --name ${NAME} --yes
