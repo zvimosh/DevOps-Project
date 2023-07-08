@@ -23,14 +23,14 @@ services:
             dockerfile: Dockerfile
             x-bake:
                 tags:
-                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0
-                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:latest
+                - ${DOCKER_REPO}/react-backend:1.0.0
+                - ${DOCKER_REPO}/react-backend:latest
         networks:
             - react
         container_name: backend
         ports:
             - '8081:8080'
-        image: "865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0"
+        image: ${DOCKER_REPO}/react-backend:1.0.0
         depends_on:
             - db
     frontend:
@@ -39,14 +39,14 @@ services:
             dockerfile: Dockerfile
             x-bake:
                 tags:
-                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
-                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:latest
+                - ${DOCKER_REPO}/react-frontend:1.0.0
+                - ${DOCKER_REPO}/react-frontend:latest
         networks:
             - react
         container_name: frontend
         ports:
             - '3000:3000'
-        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
+        image: ${DOCKER_REPO}/react-frontend:1.0.0
         depends_on:
             - backend
 
