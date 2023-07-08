@@ -39,17 +39,9 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        $backendImage = "$ECR_REGISTRY/react-backend:latest"
-        $frontendImage = "$ECR_REGISTRY/react-frontend:latest"
-        # replace placeholders in docker-compose.yml with actual image names
-        sed -i 's/backendImagePlaceholder/$backendImage/g'
-        sed -i 's/frontendImagePlaceholder/$frontendImage/g' docker-compose.yml
-        
-        # build and push images
-
+        # Build the docker images
         docker compose build
-        docker push $ECR_REGISTRY/react-backend:1.0.0
-        docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
-        docker push $ECR_REGISTRY/react-frontend:latest
+        docker build -t $ECR_REGISTRY/react-backend:1.0.0 -t $ECR_REGISTRY/react-backend:latest ./backend/
+        docker build -t $ECR_REGISTRY/react-frontend:1.0.0 -t $ECR_REGISTRY/react-frontend:latest ./frontend/
+
         #echo "$GITHUB_OUTPUT"
