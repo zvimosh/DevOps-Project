@@ -12,13 +12,13 @@ on:
 
 env:
   # AWS ENV
-  AWS_REGION: eu-central-1 # set this to your preferred AWS region, e.g. us-west-1
+  AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
   KOPS_PROVIDER: aws
   KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
   KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
   KOPS_DNS_ZONE: foxyandpuff.com
-  KOPS_CLUSTER_ZONES: eu-central-1a #,eu-central-1b,eu-central-1c
+  KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
 
 permissions:
   contents: read
