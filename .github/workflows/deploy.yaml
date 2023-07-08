@@ -17,7 +17,7 @@ env:
   KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
   KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
-  KOPS_DNS_ZONE: foxyandpuff.com
+  KOPS_DNS_ZONE: kops.foxyandpuff.com
   KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
 
 permissions:
