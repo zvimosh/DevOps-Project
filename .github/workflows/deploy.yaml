@@ -40,7 +40,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
         # Get the DB password from the secrets store
-        cat {{ secrets.DB_PASSWORD }} > ./db/password.txt
+        cat "{{ secrets.DB_PASSWORD }}"" > ./db/password.txt
         # Build the images
         docker compose build
         docker push $ECR_REGISTRY/react-backend:1.0.0
