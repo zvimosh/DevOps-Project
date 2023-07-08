@@ -10,10 +10,9 @@ RUN mvn install
 
 FROM builder as dev-envs
 
-RUN <<EOF
-apt-get update
-apt-get install -y git
-EOF
+RUN apt-get update
+RUN apt-get update
+RUN apt-get install -y git
 
 RUN <<EOF
 useradd -s /bin/bash -m vscode
