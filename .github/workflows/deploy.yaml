@@ -42,8 +42,9 @@ jobs:
         $backendImage = "$ECR_REGISTRY/react-backend:latest"
         $frontendImage = "$ECR_REGISTRY/react-frontend:latest"
         # replace placeholders in docker-compose.yml with actual image names
-        sed -i "s|"backendImagePlaceholder"|$backendImage|g" ./docker-compose.yml
-        sed -i "s|"frontendImagePlaceholder"|$frontendImage|g" ./docker-compose.yml
+        sed -e "s/backendImagePlaceholder/$backendImage/g" -e "s/frontendImagePlaceholder/$frontendImage/g" docker-compose.yml
+        #sed -i "s|"backendImagePlaceholder"|$backendImage|g" ./docker-compose.yml
+        #sed -i "s|"frontendImagePlaceholder"|$frontendImage|g" ./docker-compose.yml
         
         # build and push images
 
