@@ -39,8 +39,15 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        # Build the docker images
-        docker build -t $ECR_REGISTRY/react-backend:1.0.0 -t $ECR_REGISTRY/react-backend:latest ./backend/
-        docker build -t $ECR_REGISTRY/react-frontend:1.0.0 -t $ECR_REGISTRY/react-frontend:latest ./frontend/
-
+        # Get the DB password from the secrets store
+        cat {{ secrets.DB_PASSWORD }} > ./db/password.txt
+        # Build the images
+        docker compose build
+        docker push $ECR_REGISTRY/react-backend:1.0.0
+        docker push $ECR_REGISTRY/react-backend:latest
+        docker push $ECR_REGISTRY/react-frontend:1.0.0
+        docker push $ECR_REGISTRY/react-frontend:latest
         #echo "$GITHUB_OUTPUT"
+
+
+
