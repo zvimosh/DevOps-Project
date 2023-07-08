@@ -16,7 +16,7 @@ env:
   KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
   KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
-  KOPS_DNS_ZONE: foxyandpuff.com
+  KOPS_DNS_ZONE: kops.foxyandpuff.com
   KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
@@ -39,16 +39,24 @@ jobs:
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
+
+    - name: install kops
+      run: |
+        # install kops
+        sudo apt-get update
+        curl -Lo kops https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
+        chmod +x kops
+        sudo mv kops /usr/local/bin/kops       
     
-    - name : create kops cluster
+    - name : delete kops cluster
       run: |
         # export KOPS env variables
         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
-        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
-        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
-        #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
-        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+        export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
 
         # delete kops cluster
         kops delete cluster --name ${NAME} --yes
