@@ -1,0 +1,44 @@
+version: '3.3'
+networks:
+    react:
+            name: react
+services:
+    db:
+        networks:
+            - react
+        container_name: mariadb
+        ports:
+            - '0.0.0.0:27017:27017'
+        environment:
+            - MARIADB_ROOT_PASSWORD_FILE=/run/secrets/MARIADB_ROOT_PASSWORD_FILE
+            - MARIADB_USER=user
+            - MARIADB_PASSWORD=/run/secrets/MARIADB_ROOT_PASSWORD_FILE
+            - MARIADB_DATABASE=react-app
+        volumes:
+            - ./db/password.txt:/run/secrets/MARIADB_ROOT_PASSWORD_FILE
+        image: mariadb:10.6.4-focal
+    backend:
+        build: 
+            context: ./backend/
+            dockerfile: Dockerfile
+        networks:
+            - react
+        container_name: backend
+        ports:
+            - '8081:8080'
+        image: 343568180534.dkr.ecr.eu-central-1.amazonaws.com/react-backend:1.0.0
+        depends_on:
+            - db
+    frontend:
+        build: 
+            context: ./frontend/
+            dockerfile: Dockerfile
+        networks:
+            - react
+        container_name: frontend
+        ports:
+            - '3000:3000'
+        image: 343568180534.dkr.ecr.eu-central-1.amazonaws.com/react-frontend:1.0.0
+        depends_on:
+            - backend
+
