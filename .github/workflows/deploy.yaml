@@ -41,22 +41,27 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      run: |
-        # Get the DB password from the secrets store
-        echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
-        # Build the images
-        export DOCKER_REPO=$ECR_REGISTRY
-        docker buildx bake --load
-        docker push $ECR_REGISTRY/react-backend:1.0.0
-        docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
-        docker push $ECR_REGISTRY/react-frontend:latest
-        #echo "$GITHUB_OUTPUT"
+    # - name: Build, tag, and push image to Amazon ECR
+    #   id: build-image
+    #   env:
+    #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+    #   run: |
+    #     # Get the DB password from the secrets store
+    #     echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
+    #     # Build the images
+    #     export DOCKER_REPO=$ECR_REGISTRY
+    #     docker buildx bake --load
+    #     docker push $ECR_REGISTRY/react-backend:1.0.0
+    #     docker push $ECR_REGISTRY/react-backend:latest
+    #     docker push $ECR_REGISTRY/react-frontend:1.0.0
+    #     docker push $ECR_REGISTRY/react-frontend:latest
+    #     #echo "$GITHUB_OUTPUT"
     
+    - name: export aws
+      run: |
+        export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
+        export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
+
     - name: install kops
       run: |
         # install kops
