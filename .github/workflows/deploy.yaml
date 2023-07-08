@@ -13,6 +13,12 @@ on:
 env:
   # AWS ENV
   AWS_REGION: eu-central-1 # set this to your preferred AWS region, e.g. us-west-1
+  KOPS_PROVIDER: aws
+  KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
+  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
+  KOPS_CLUSTER_NAME: kops.foxyandpuff.com
+  KOPS_DNS_ZONE: foxyandpuff.com
+  KOPS_CLUSTER_ZONES: eu-central-1a #,eu-central-1b,eu-central-1c
 
 permissions:
   contents: read
@@ -42,12 +48,28 @@ jobs:
         # Get the DB password from the secrets store
         echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
         # Build the images
-        docker compose build
-        docker push $ECR_REGISTRY/react-backend:1.0.0
-        docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
-        docker push $ECR_REGISTRY/react-frontend:latest
+        docker buildx bake --push
+        #docker push $ECR_REGISTRY/react-backend:1.0.0
+        #docker push $ECR_REGISTRY/react-backend:latest
+        #docker push $ECR_REGISTRY/react-frontend:1.0.0
+        #docker push $ECR_REGISTRY/react-frontend:latest
         #echo "$GITHUB_OUTPUT"
+    
+    # - name : create kops cluster
+    #   run: |
+    #     # export KOPS env variables
+    #     export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+    #     export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+    #     export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
+    #     export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
+    #     #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
+    #     export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
+
+    #     # create kops cluster
+    #     kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=2 --node-size=t2.micro --master-size=t2.micro --dns-zone=${KOPS_DNS_ZONE} --discovery-store=s3://${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
+    #     kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
+    #     kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 10m
+
 
 
 

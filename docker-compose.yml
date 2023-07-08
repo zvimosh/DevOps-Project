@@ -21,6 +21,10 @@ services:
         build: 
             context: ./backend/
             dockerfile: Dockerfile
+            x-bake:
+                tags:
+                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0
+                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:latest
         networks:
             - react
         container_name: backend
@@ -33,6 +37,10 @@ services:
         build: 
             context: ./frontend/
             dockerfile: Dockerfile
+            x-bake:
+                tags:
+                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
+                - 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:latest
         networks:
             - react
         container_name: frontend
