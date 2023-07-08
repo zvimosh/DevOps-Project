@@ -40,7 +40,6 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
         # Build the docker images
-        docker compose build
         docker build -t $ECR_REGISTRY/react-backend:1.0.0 -t $ECR_REGISTRY/react-backend:latest ./backend/
         docker build -t $ECR_REGISTRY/react-frontend:1.0.0 -t $ECR_REGISTRY/react-frontend:latest ./frontend/
 
