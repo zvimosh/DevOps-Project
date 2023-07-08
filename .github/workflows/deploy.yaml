@@ -49,6 +49,7 @@ jobs:
         # Get the DB password from the secrets store
         echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
         # Build the images
+        export DOCKER_REPO=$ECR_REGISTRY
         docker buildx bake --load
         docker push $ECR_REGISTRY/react-backend:1.0.0
         docker push $ECR_REGISTRY/react-backend:latest
