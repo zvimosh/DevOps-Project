@@ -94,7 +94,7 @@ jobs:
     - name: destroy cluster
       run: |
             # delete kops cluster
-            kops delete cluster --name ${NAME} --yes
+            kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
 
 
 
