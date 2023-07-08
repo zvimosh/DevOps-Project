@@ -41,36 +41,48 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      run: |
-        # Get the DB password from the secrets store
-        echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
-        # Build the images
-        export DOCKER_REPO=$ECR_REGISTRY
-        docker buildx bake --load
-        docker push $ECR_REGISTRY/react-backend:1.0.0
-        docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
-        docker push $ECR_REGISTRY/react-frontend:latest
-        #echo "$GITHUB_OUTPUT"
-    
-    # - name : create kops cluster
+    # - name: Build, tag, and push image to Amazon ECR
+    #   id: build-image
+    #   env:
+    #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
     #   run: |
-    #     # export KOPS env variables
-    #     export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
-    #     export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
-    #     export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
-    #     export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
-    #     #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
-    #     export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
+    #     # Get the DB password from the secrets store
+    #     echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
+    #     # Build the images
+    #     export DOCKER_REPO=$ECR_REGISTRY
+    #     docker buildx bake --load
+    #     docker push $ECR_REGISTRY/react-backend:1.0.0
+    #     docker push $ECR_REGISTRY/react-backend:latest
+    #     docker push $ECR_REGISTRY/react-frontend:1.0.0
+    #     docker push $ECR_REGISTRY/react-frontend:latest
+    #     #echo "$GITHUB_OUTPUT"
+    
+    - name : create kops cluster
+      run: |
+        # export KOPS env variables
+        export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+        export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
+        export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
 
-    #     # create kops cluster
-    #     kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=2 --node-size=t2.micro --master-size=t2.micro --dns-zone=${KOPS_DNS_ZONE} --discovery-store=s3://${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-    #     kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
-    #     kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 10m
+        # create kops cluster
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=2 --node-size=t2.micro --master-size=t2.micro --dns-zone=${KOPS_DNS_ZONE} --discovery-store=s3://${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
+        kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 10m
+      
+    - name: get kube config
+      uses: actions/upload-artifact@v3
+      with:
+        name: kubeconfig
+        path: ~/.kube/config
+
+    - name: destroy cluster
+      run: |
+            # delete kops cluster
+            kops delete cluster --name ${NAME} --yes
+
 
 
 
