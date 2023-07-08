@@ -1,0 +1,58 @@
+
+name: Destroy
+on:
+  #push:
+  #  branches: ["dev"]
+  #pull_request:
+  #  branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  # AWS ENV
+  AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
+  KOPS_PROVIDER: aws
+  KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
+  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
+  KOPS_CLUSTER_NAME: kops.foxyandpuff.com
+  KOPS_DNS_ZONE: foxyandpuff.com
+  KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name : create kops cluster
+      run: |
+        # export KOPS env variables
+        export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+        export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}}
+        #export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}}
+
+        # delete kops cluster
+        kops delete cluster --name ${NAME} --yes
+
+
+
+
