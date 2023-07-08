@@ -26,7 +26,7 @@ services:
         container_name: backend
         ports:
             - '8081:8080'
-        image: 343568180534.dkr.ecr.eu-central-1.amazonaws.com/react-backend:1.0.0
+        image: backendImagePlaceholder
         depends_on:
             - db
     frontend:
@@ -38,7 +38,7 @@ services:
         container_name: frontend
         ports:
             - '3000:3000'
-        image: 343568180534.dkr.ecr.eu-central-1.amazonaws.com/react-frontend:1.0.0
+        image: FrontendImagePlaceholder
         depends_on:
             - backend
 
