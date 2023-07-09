@@ -19,6 +19,9 @@ env:
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
   KOPS_DNS_ZONE: kops.foxyandpuff.com
   KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
+  KOPS_MASTER_INSTANCE_SIZE: t3.large
+  KOPS_NODE_INSTANCE_SIZE: t3.large
+  KOPS_NODE_COUNT: 1
 
 permissions:
   contents: read
@@ -79,13 +82,16 @@ jobs:
         export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
         export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
         export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+        export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+        export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+        export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
         # create kops cluster
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=1 --node-size=t2.micro --master-size=t2.micro --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-
-        #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=1 --node-size=t3.medium --master-size=t3.medium --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-        #kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
-        kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 1m
+        #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
+        kops export kubecfg --name "${CLUSTER_NAME}" --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
+        kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
       continue-on-error: true
       
     - name: get kube config
@@ -105,6 +111,9 @@ jobs:
             export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
             export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
             export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+            export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+            export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+            export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
             # delete kops cluster
             kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
 
