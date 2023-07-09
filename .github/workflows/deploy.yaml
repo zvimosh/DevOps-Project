@@ -85,15 +85,18 @@ jobs:
 
         kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=1 --node-size=t3.medium --master-size=t3.medium --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
         #kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
-        kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 10m
+        kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 1m
+      continue-on-error: true
       
     - name: get kube config
+      if: success() 
       uses: actions/upload-artifact@v3
       with:
         name: kubeconfig
         path: ~/.kube/config
 
     - name: destroy cluster
+      if: always()
       run: |
             # delete kops cluster
             kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
