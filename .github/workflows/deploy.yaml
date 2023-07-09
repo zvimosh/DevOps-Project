@@ -65,13 +65,15 @@ jobs:
     #     export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
     #     export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 
-    - name: install kops
+    - name: install dependencies
       run: |
         # install kops
         sudo apt-get update
         curl -Lo kops https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
         chmod +x kops
-        sudo mv kops /usr/local/bin/kops   
+        sudo mv kops /usr/local/bin/kops
+        # install kubectl   
+        sudo snap install kubectl --classic -y
       
     - name: insert public key
       run: |
@@ -101,6 +103,14 @@ jobs:
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
         kops export kubecfg --name "${CLUSTER_NAME}" --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
+        # Wait for cluster to be ready
+        sleep 60
+        
+        # Get nodes
+        kubectl get nodes
+        
+        # Apply Ingress Nginx deployment
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
       continue-on-error: true
       
     # - name: destroy cluster
