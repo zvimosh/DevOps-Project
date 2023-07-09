@@ -99,11 +99,12 @@ jobs:
 
         # create kops cluster
         #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub  --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery  --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
         kops export kubecfg --name "${CLUSTER_NAME}" --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
-        kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
+        kops validate cluster --state ${KOPS_STATE_STORE} --wait 15m
         # Wait for cluster to be ready
+        echo "Waiting for cluster to be ready... (60 seconds)"
         sleep 60
         
         # Get nodes
