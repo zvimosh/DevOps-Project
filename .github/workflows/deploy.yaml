@@ -18,7 +18,8 @@ env:
   KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
   KOPS_DNS_ZONE: kops.foxyandpuff.com
-  KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
+  KOPS_CLUSTER_ZONES: us-east-1a 
+  #,us-east-1b,us-east-1c
   KOPS_MASTER_INSTANCE_SIZE: t3.large
   KOPS_NODE_INSTANCE_SIZE: t3.large
   KOPS_NODE_COUNT: 1
@@ -97,10 +98,10 @@ jobs:
 
         # create kops cluster
         #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
-        kops export kubecfg --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
-        kops validate cluster --state ${KOPS_STATE_STORE} --wait 15m
+        #kops export kubecfg --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
+        kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
         # Wait for cluster to be ready
         echo "Waiting for cluster to be ready... (60 seconds)"
         sleep 60
@@ -110,7 +111,7 @@ jobs:
         
         # Apply Ingress Nginx deployment
         #kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
-      continue-on-error: true
+      #continue-on-error: true
       
     # - name: destroy cluster
     #   if: failure()
