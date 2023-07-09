@@ -73,7 +73,7 @@ jobs:
         chmod +x kops
         sudo mv kops /usr/local/bin/kops
         # install kubectl   
-        sudo snap install kubectl --classic -y
+        sudo snap install kubectl --classic
       
     - name: insert public key
       run: |
