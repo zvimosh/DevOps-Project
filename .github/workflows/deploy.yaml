@@ -74,15 +74,6 @@ jobs:
         sudo mv kops /usr/local/bin/kops
         # install kubectl   
         sudo snap install kubectl --classic
-      
-    - name: insert public key
-      run: |
-        # insert public key
-        mkdir -p ~/.ssh
-        echo "${{ secrets.KOPS_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
-        echo "${{ secrets.KOPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa.pub
 
     - name : create kops cluster
       run: |
@@ -97,11 +88,18 @@ jobs:
         export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
+        # insert public key
+        mkdir -p ~/.ssh
+        echo "${{ secrets.KOPS_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
+        echo "${{ secrets.KOPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa.pub
+
         # create kops cluster
         #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery  --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
-        kops export kubecfg --name "${CLUSTER_NAME}" --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
+        kops export kubecfg --name ${CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 15m
         # Wait for cluster to be ready
         echo "Waiting for cluster to be ready... (60 seconds)"
@@ -111,7 +109,7 @@ jobs:
         kubectl get nodes
         
         # Apply Ingress Nginx deployment
-        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
+        #kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
       continue-on-error: true
       
     # - name: destroy cluster
