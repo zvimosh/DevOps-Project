@@ -94,28 +94,27 @@ jobs:
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
       continue-on-error: true
       
+    # - name: destroy cluster
+    #   if: failure()
+    #   run: |
+    #         # export KOPS env variables
+    #         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+    #         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+    #         export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+    #         export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+    #         export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+    #         export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+    #         export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+    #         export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+    #         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
+    #         # delete kops cluster
+    #         kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
+
     - name: get kube config
-      if: success() 
       uses: actions/upload-artifact@v3
       with:
         name: kubeconfig
         path: ~/.kube/config
-
-    - name: destroy cluster
-      if: always()
-      run: |
-            # export KOPS env variables
-            export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
-            export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
-            export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
-            export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
-            export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
-            export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
-            export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
-            export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
-            export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
-            # delete kops cluster
-            kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
 
 
 
