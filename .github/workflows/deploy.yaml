@@ -75,6 +75,7 @@ jobs:
         sudo mv kops /usr/local/bin/kops
         # install kubectl   
         sudo snap install kubectl --classic
+        sudo snap install jq
 
     - name : create kops cluster
       run: |
@@ -97,22 +98,52 @@ jobs:
         chmod 600 ~/.ssh/id_rsa.pub
 
         # create kops cluster
-        #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
+        #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes -o yaml > clusterspec.yaml
         kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
-        #kops export kubecfg --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/config
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
+        # get kops cluster spec
+        kops get cluster --name ${KOPS_CLUSTER_NAME} -o yaml > clusterspec.yaml
+        # add additionalPolicies to kops cluster spec file from additionalPolicies.yaml under spec: additionalPolicies:
+        cat kops/additionalPolicies.yaml >> clusterspec.yaml
+        # replace kops cluster spec
+        kops replace -f clusterspec.yaml
+        # update kops cluster
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
         # Wait for cluster to be ready
         echo "Waiting for cluster to be ready... (60 seconds)"
         sleep 60
         
-        # Get nodes
-        kubectl get nodes
-        
+        # Get all
+        kubectl get no,po,svc,ing -o wide -A
+
         # Apply Ingress Nginx deployment
-        #kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
-      #continue-on-error: true
-      
+        # download Ingress Nginx deployment yaml
+        curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o kube/deploy.yaml
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
+    - name: apply kubernetes deployment
+      run: |
+        # export KOPS env variables
+        export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+        export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+        export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+        export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+        export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+        export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
+
+        # apply kubernetes deployment
+        kubectl apply -f kube/hello-world.yaml
+  
+        # Get all
+        kubectl get no,po,svc,ing -o wide -A
+        kubectl get no,po,svc,ing -o wide -A > kubernetes.txt
+
+        echo "APP URL: http://$(kubectl -n default get svc hello-world-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+
+
     # - name: destroy cluster
     #   if: failure()
     #   run: |
@@ -134,6 +165,18 @@ jobs:
       with:
         name: kubeconfig
         path: ~/.kube/config
+
+    - name: get kops clusterspec
+      uses: actions/upload-artifact@v3
+      with:
+        name: clusterspec
+        path: clusterspec.yaml
+
+    - name: get kube status
+      uses: actions/upload-artifact@v3
+      with:
+        name: kubernetes
+        path: kubernetes.txt
 
 
 
