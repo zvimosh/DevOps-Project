@@ -9,6 +9,6 @@ RUN npm ci
 COPY . /code
 
 ENV CI=true
-ENV PORT=3000
+ENV PORT=80
 
 ENTRYPOINT [ "npm", "start" ]
