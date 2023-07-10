@@ -2,8 +2,8 @@
 name: Deploy
 
 on:
-  push:
-    branches: ["dev"]
+  #push:
+  #  branches: ["dev"]
   #pull_request:
   #  branches: [ "main" ]
 
@@ -18,7 +18,11 @@ env:
   KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
   KOPS_DNS_ZONE: kops.foxyandpuff.com
-  KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
+  KOPS_CLUSTER_ZONES: us-east-1a 
+  #,us-east-1b,us-east-1c
+  KOPS_MASTER_INSTANCE_SIZE: t3.large
+  KOPS_NODE_INSTANCE_SIZE: t3.large
+  KOPS_NODE_COUNT: 1
 
 permissions:
   contents: read
@@ -62,13 +66,16 @@ jobs:
     #     export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
     #     export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 
-    - name: install kops
+    - name: install dependencies
       run: |
         # install kops
         sudo apt-get update
         curl -Lo kops https://github.com/kubernetes/kops/releases/download/$(curl -s https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d '"' -f 4)/kops-linux-amd64
         chmod +x kops
-        sudo mv kops /usr/local/bin/kops        
+        sudo mv kops /usr/local/bin/kops
+        # install kubectl   
+        sudo snap install kubectl --classic
+        sudo snap install jq
 
     - name : create kops cluster
       run: |
@@ -79,22 +86,104 @@ jobs:
         export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
         export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
         export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+        export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+        export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+        export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
+
+        # insert public key
+        mkdir -p ~/.ssh
+        echo "${{ secrets.KOPS_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
+        echo "${{ secrets.KOPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa.pub
 
         # create kops cluster
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=2 --node-size=t2.micro --master-size=t2.micro --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes
-        kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes
-        kops validate cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --wait 10m
-      
+        #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes -o yaml > clusterspec.yaml
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
+        kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
+        # get kops cluster spec
+        kops get cluster --name ${KOPS_CLUSTER_NAME} -o yaml > clusterspec.yaml
+        # add additionalPolicies to kops cluster spec file from additionalPolicies.yaml under spec: additionalPolicies:
+        for f in config/kops/additionalPolicies.yaml; do   cat $f >> clusterspec.yaml; done
+        # replace kops cluster spec
+        kops replace -f clusterspec.yaml
+        # update kops cluster
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
+        # export kops kubeconfig
+        kops export kubecfg --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/kops-kube-config
+        # Wait for cluster to be ready
+        echo "Waiting for cluster to be ready... (60 seconds)"
+        sleep 60
+        
+        # Get all
+        kubectl get no,po,svc,ing -o wide -A
+
+        # Apply Ingress Nginx deployment
+        # download Ingress Nginx deployment yaml
+        curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o config/kube/deploy.yaml
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
+    - name: apply kubernetes deployment
+      run: |
+        # export KOPS env variables
+        export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+        export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+        export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+        export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+        export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+        export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+        export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+        export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+        export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
+
+        # apply kubernetes deployment
+        kubectl apply -f config/kube/hello-world.yaml
+  
+        # Get all
+        kubectl get no,po,svc,ing -o wide -A
+        kubectl get no,po,svc,ing -o wide -A > kubernetes.txt
+        # check if external loab balancer is created
+        if [ "$(kubectl -n default get svc hello-world-lb-svc -o json)" = "null" ]; then
+          echo "External load balancer is not created yet"
+          echo "Waiting for external load balancer to be created... (60 seconds)"
+          sleep 60
+        fi
+        echo "APP URL: http://$(kubectl -n default get svc hello-world-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+
+
+    # - name: destroy cluster
+    #   if: failure()
+    #   run: |
+    #         # export KOPS env variables
+    #         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
+    #         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
+    #         export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
+    #         export KOPS_DISCOVERY_STORE=s3://${{ env.KOPS_BUCKET_OIDC_STORE }}
+    #         export KOPS_DNS_ZONE=${{ env.KOPS_DNS_ZONE }}
+    #         export KOPS_CLUSTER_ZONES=${{ env.KOPS_CLUSTER_ZONES }}
+    #         export KOPS_MASTER_INSTANCE_SIZE=${{ env.KOPS_MASTER_INSTANCE_SIZE }}
+    #         export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
+    #         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
+    #         # delete kops cluster
+    #         kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
+
     - name: get kube config
       uses: actions/upload-artifact@v3
       with:
-        name: kubeconfig
-        path: ~/.kube/config
+        name: config
+        path: ~/.kube/kops-kube-config
 
-    - name: destroy cluster
-      run: |
-            # delete kops cluster
-            kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
+    - name: get kops clusterspec
+      uses: actions/upload-artifact@v3
+      with:
+        name: clusterspec
+        path: clusterspec.yaml
+
+    - name: get kube status
+      uses: actions/upload-artifact@v3
+      with:
+        name: kubernetes
+        path: kubernetes.txt
 
 
 

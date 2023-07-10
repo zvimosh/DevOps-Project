@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  destroy:
     runs-on: [ubuntu-latest]
     steps:
     - name: Checkout
