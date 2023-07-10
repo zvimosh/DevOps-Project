@@ -105,7 +105,7 @@ jobs:
         # get kops cluster spec
         kops get cluster --name ${KOPS_CLUSTER_NAME} -o yaml > clusterspec.yaml
         # add additionalPolicies to kops cluster spec file from additionalPolicies.yaml under spec: additionalPolicies:
-        cat config/kops/additionalPolicies.yaml >> clusterspec.yaml
+        for f in config/kops/additionalPolicies.yaml; do   cat $f >> clusterspec.yaml; done
         # replace kops cluster spec
         kops replace -f clusterspec.yaml
         # update kops cluster
