@@ -21,6 +21,7 @@ spec:
       containers:
       - name: backend
         image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
