@@ -142,7 +142,12 @@ jobs:
         # Get all
         kubectl get no,po,svc,ing -o wide -A
         kubectl get no,po,svc,ing -o wide -A > kubernetes.txt
-
+        # check if external loab balancer is created
+        if [ "$(kubectl -n default get svc hello-world-lb-svc -o json)" = "null" ]; then
+          echo "External load balancer is not created yet"
+          echo "Waiting for external load balancer to be created... (60 seconds)"
+          sleep 60
+        fi
         echo "APP URL: http://$(kubectl -n default get svc hello-world-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
 
 
