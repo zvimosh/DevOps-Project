@@ -1,7 +1,7 @@
 version: '3.3'
 networks:
     react:
-            name: react
+        name: react
 services:
     db:
         networks:
