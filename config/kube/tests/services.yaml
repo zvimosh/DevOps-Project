@@ -19,7 +19,25 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: app-nodeport
+  name: hello-world-lb-svc
+  labels:
+    app: hello-world
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+  - name: https
+    port: 443
+  selector:
+    app: hello-world
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
 spec:
   selector:
     app: frontend
@@ -27,7 +45,7 @@ spec:
   - protocol: TCP
     port: 3000
     targetPort: 3000
-    nodePort: 30081
+    nodePort: 30091
   type: NodePort
 ---
 apiVersion: v1

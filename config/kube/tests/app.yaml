@@ -1,3 +1,7 @@
+############################
+# hello-world.yaml
+# Deployment and Service for hello-world application with 2 replicas and NodePort service on port 30081 and NLB service on port 80 and 443
+############################
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +21,7 @@ spec:
       containers:
       - name: backend
         image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
@@ -47,19 +52,11 @@ spec:
               key: DB_PASSWORD
         resources:
           limits:
-            memory: 256Mi
-            cpu: "250m"
+            memory: 1024Mi
+            cpu: "512m"
           requests:
-            memory: 128Mi
-            cpu: "80m"
-      #   volumeMounts:
-#   - name: db-password-volume
-#     mountPath: /run/secrets/db-password
-#     readOnly: true
-# volumes:
-# - name: db-password-volume
-#   configMap:
-#     name: db-password-config
+            memory: 256Mi
+            cpu: "254m"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -80,8 +77,12 @@ spec:
       containers:
       - name: frontend
         image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
+        env:
+        - name: PUBLIC_URL
+          value: http://ab44e6aa53498406abcd8a883344d889-6b8bd49e7cbc5ad8.elb.us-east-1.amazonaws.com
         resources:
           limits:
             memory: 1024Mi
@@ -89,6 +90,17 @@ spec:
           requests:
             memory: 512Mi
             cpu: "500m"
-        env:
-        - name: BACKEND_URL
-          value: "http://backend-service:8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-nodeport
+spec:
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30001
+  type: NodePort
