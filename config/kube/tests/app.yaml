@@ -79,7 +79,10 @@ spec:
         image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
         imagePullPolicy: Always
         ports:
-        - containerPort: 80
+        - containerPort: 3000
+        env:
+        - name: PUBLIC_URL
+          value: http://ab44e6aa53498406abcd8a883344d889-6b8bd49e7cbc5ad8.elb.us-east-1.amazonaws.com
         resources:
           limits:
             memory: 1024Mi
@@ -101,23 +104,3 @@ spec:
     targetPort: 80
     nodePort: 30001
   type: NodePort
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-lb-svc
-  labels:
-    app: frontend
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: nlb
-spec:
-  type: LoadBalancer
-  ports:
-  - name: http
-    port: 80
-  - name: https
-    port: 443
-  selector:
-    app: frontend
-
