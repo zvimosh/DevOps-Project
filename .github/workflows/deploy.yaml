@@ -110,6 +110,8 @@ jobs:
         kops replace -f clusterspec.yaml
         # update kops cluster
         kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
+        # export kops kubeconfig
+        kops export kubecfg --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/kops-kube-config
         # Wait for cluster to be ready
         echo "Waiting for cluster to be ready... (60 seconds)"
         sleep 60
@@ -163,8 +165,8 @@ jobs:
     - name: get kube config
       uses: actions/upload-artifact@v3
       with:
-        name: kubeconfig
-        path: ~/.kube/config
+        name: config
+        path: ~/.kube/kops-kube-config
 
     - name: get kops clusterspec
       uses: actions/upload-artifact@v3
