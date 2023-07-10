@@ -50,13 +50,9 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        # Get the DB password from the secrets store
-        echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
         # Build the images
         export DOCKER_REPO=$ECR_REGISTRY
-        docker buildx bake --load
-        docker push $ECR_REGISTRY/react-backend:1.0.0
-        docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
-        docker push $ECR_REGISTRY/react-frontend:latest
+        docker build -t $ECR_REGISTRY/hello-world-war:1.0.0 -t $ECR_REGISTRY/hello-world-war:latest .
+        docker push $ECR_REGISTRY/hello-world-war:1.0.0
+        docker push $ECR_REGISTRY/hello-world-war:latest
         #echo "$GITHUB_OUTPUT"
