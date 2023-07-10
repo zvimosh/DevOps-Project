@@ -105,7 +105,7 @@ jobs:
         # get kops cluster spec
         kops get cluster --name ${KOPS_CLUSTER_NAME} -o yaml > clusterspec.yaml
         # add additionalPolicies to kops cluster spec file from additionalPolicies.yaml under spec: additionalPolicies:
-        cat kops/additionalPolicies.yaml >> clusterspec.yaml
+        cat config/kops/additionalPolicies.yaml >> clusterspec.yaml
         # replace kops cluster spec
         kops replace -f clusterspec.yaml
         # update kops cluster
@@ -121,7 +121,7 @@ jobs:
 
         # Apply Ingress Nginx deployment
         # download Ingress Nginx deployment yaml
-        curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o kube/deploy.yaml
+        curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o config/kube/deploy.yaml
         kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
     - name: apply kubernetes deployment
       run: |
@@ -137,7 +137,7 @@ jobs:
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
         # apply kubernetes deployment
-        kubectl apply -f kube/hello-world.yaml
+        kubectl apply -f config/kube/hello-world.yaml
   
         # Get all
         kubectl get no,po,svc,ing -o wide -A
