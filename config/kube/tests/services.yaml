@@ -37,6 +37,24 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: hello-world-war-lb-svc
+  labels:
+    app: hello-world-war
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+  - name: https
+    port: 443
+  selector:
+    app: hello-world-war
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: frontend-service
 spec:
   selector:
