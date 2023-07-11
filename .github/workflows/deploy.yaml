@@ -137,7 +137,7 @@ jobs:
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
         # apply kubernetes deployment
-        kubectl apply -f config/kube/tests/configmap.yaml
+        kubectl apply -f config/kube/tests/configMap.yaml
         kubectl apply -f config/kube/tests/mariadb.yaml
         kubectl apply -f config/kube/tests/hello-world.yaml
         kubectl apply -f config/kube/tests/app.yaml
