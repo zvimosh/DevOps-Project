@@ -1,19 +1,19 @@
-additionalPolicies:
-  master: |
-    [
-      {
-        "Effect": "Allow",
-        "Action": ["ec2:*"],
-        "Resource": ["*"]
-      },
-      {
-        "Effect": "Allow",
-        "Action": ["iam:*"],
-        "Resource": ["*"]
-      },
-      {
-        "Effect": "Allow",
-        "Action": ["ecr:*"],
-        "Resource": ["*"]
-      }
-    ]
+  additionalPolicies:
+    master: |
+      [
+        {
+          "Effect": "Allow",
+          "Action": ["ec2:*"],
+          "Resource": ["*"]
+        },
+        {
+          "Effect": "Allow",
+          "Action": ["iam:*"],
+          "Resource": ["*"]
+        },
+        {
+          "Effect": "Allow",
+          "Action": ["ecr:*"],
+          "Resource": ["*"]
+        }
+      ]

@@ -90,3 +90,20 @@ Removing react-java-mysql-frontend-1 ... done
 Removing react-java-mysql-db-1       ... done
 Removing network react-java-mysql-default
 ```
+
+Grafana Metrics PromQL
+## cpu metrics PromQL query
+
+sum(rate(container_cpu_usage_seconds_total{namespace="default"}[5m])) by (pod_name)
+
+## memory metrics PromQL query
+
+sum(container_memory_usage_bytes{namespace="default"}) by (pod_name)
+
+## network metrics PromQL query
+
+sum(rate(container_network_receive_bytes_total{namespace="default"}[5m])) by (pod_name)
+
+## node metrics PromQL query
+
+100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
