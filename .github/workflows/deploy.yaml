@@ -22,7 +22,7 @@ env:
   #,us-east-1b,us-east-1c
   KOPS_MASTER_INSTANCE_SIZE: t3.large
   KOPS_NODE_INSTANCE_SIZE: t3.large
-  KOPS_NODE_COUNT: 1
+  KOPS_NODE_COUNT: 2
 
 permissions:
   contents: read
@@ -55,9 +55,9 @@ jobs:
         # Build the images
         export DOCKER_REPO=$ECR_REGISTRY
         docker buildx bake --load
-        docker push $ECR_REGISTRY/react-backend:1.0.0
+        #docker push $ECR_REGISTRY/react-backend:${{ github.sha }}
         docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
+        #docker push $ECR_REGISTRY/react-frontend:${{ github.sha }}
         docker push $ECR_REGISTRY/react-frontend:latest
         #echo "$GITHUB_OUTPUT"
     
@@ -99,7 +99,7 @@ jobs:
 
         # create kops cluster
         #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes -o yaml > clusterspec.yaml
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub  --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
         # get kops cluster spec
@@ -108,13 +108,14 @@ jobs:
         for f in config/kops/additionalPolicies.yaml; do   cat $f >> clusterspec.yaml; done
         # replace kops cluster spec
         kops replace -f clusterspec.yaml
+        #kops create sshpublickey -i ~/.ssh/id_rsa.pub
         # update kops cluster
         kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
         # export kops kubeconfig
         kops export kubecfg --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/kops-kube-config
         # Wait for cluster to be ready
-        echo "Waiting for cluster to be ready... (60 seconds)"
-        sleep 60
+        echo "Waiting for cluster to be ready... (10 seconds)"
+        sleep 10
         
         # Get all
         kubectl get no,po,svc,ing -o wide -A
@@ -123,6 +124,7 @@ jobs:
         # download Ingress Nginx deployment yaml
         curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o config/kube/deploy.yaml
         kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
+
     - name: apply kubernetes deployment
       run: |
         # export KOPS env variables
@@ -170,6 +172,15 @@ jobs:
         fi
 
 
+    - name: get deployment config and upload as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: config
+        path: |
+          ~/.kube/kops-kube-config
+          clusterspec.yaml
+          kubernetes.txt
+
         
 
     # - name: destroy cluster
@@ -187,24 +198,6 @@ jobs:
     #         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
     #         # delete kops cluster
     #         kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
-
-    - name: get kube config
-      uses: actions/upload-artifact@v3
-      with:
-        name: config
-        path: ~/.kube/kops-kube-config
-
-    - name: get kops clusterspec
-      uses: actions/upload-artifact@v3
-      with:
-        name: clusterspec
-        path: clusterspec.yaml
-
-    - name: get kube status
-      uses: actions/upload-artifact@v3
-      with:
-        name: kubernetes
-        path: kubernetes.txt
 
 
 

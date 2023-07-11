@@ -38,7 +38,7 @@ spec:
               name: db-config
               key: DB_PASSWORD
         - name: MARIADB_DATABASE
-          value: react-app
+          value: example
         - name: MARIADB_ROOT_PASSWORD
           valueFrom:
             configMapKeyRef:

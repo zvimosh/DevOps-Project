@@ -20,8 +20,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:1.0.0
-        imagePullPolicy: Always
+        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-backend:latest
         ports:
         - containerPort: 8080
         env:
@@ -30,11 +29,16 @@ spec:
             configMapKeyRef:
               name: db-config
               key: DB_HOST
-        - name: db
+        - name: MYSQL_HOST
           valueFrom:
             configMapKeyRef:
               name: db-config
               key: DB_HOST
+        - name: db
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: db
         - name: DB_PORT
           valueFrom:
             configMapKeyRef:
@@ -46,6 +50,11 @@ spec:
               name: db-config
               key: DB_USER
         - name: DB_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: DB_PASSWORD
+        - name: MYSQL_PASSWORD
           valueFrom:
             configMapKeyRef:
               name: db-config
@@ -76,13 +85,10 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:1.0.0
+        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/react-frontend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
-        # env:
-        # - name: PUBLIC_URL
-        #   value: http://ab44e6aa53498406abcd8a883344d889-6b8bd49e7cbc5ad8.elb.us-east-1.amazonaws.com
         resources:
           limits:
             memory: 1024Mi
@@ -128,6 +134,7 @@ spec:
   ports:
   - name: http
     port: 80
+    targetPort: 3000
   - name: https
     port: 443
   selector:

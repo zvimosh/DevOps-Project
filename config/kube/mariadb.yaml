@@ -18,7 +18,7 @@ spec:
       - name: mariadb
         image: mariadb:10.6.4-focal
         ports:
-        - containerPort: 27017
+        - containerPort: 3306
         resources:
           limits:
             memory: 512Mi
@@ -27,21 +27,24 @@ spec:
             memory: 256Mi
             cpu: "200m"
         env:
-        - name: MARIADB_ROOT_PASSWORD_FILE
-          value: /run/secrets/MARIADB_ROOT_PASSWORD_FILE
         - name: MARIADB_USER
-          value: user
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: DB_USER
         - name: MARIADB_PASSWORD
-          value: /run/secrets/MARIADB_ROOT_PASSWORD_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: DB_PASSWORD
         - name: MARIADB_DATABASE
-          value: react-app
-        volumeMounts:
-        - name: password-secret
-          mountPath: /run/secrets/MARIADB_ROOT_PASSWORD_FILE
-      volumes:
-      - name: password-secret
-        secret:
-          secretName: mariadb-root-password-secret
+          value: example
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: DB_PASSWORD
+
 ---
 apiVersion: v1
 kind: Service
