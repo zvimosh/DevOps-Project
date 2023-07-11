@@ -137,7 +137,11 @@ jobs:
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
         # apply kubernetes deployment
-        kubectl apply -f config/kube/hello-world.yaml
+        kubectl apply -f config/kube/tests/configmap.yaml
+        kubectl apply -f config/kube/tests/mariadb.yaml
+        kubectl apply -f config/kube/tests/hello-world.yaml
+        kubectl apply -f config/kube/tests/app.yaml
+        
   
         # Get all
         kubectl get no,po,svc,ing -o wide -A
@@ -147,7 +151,7 @@ jobs:
         elapsed=0
         timeout=180
         
-        while [ "$(kubectl -n default get svc hello-world-lb-svc -o json)" = "null" ]; do
+        while [ "$(kubectl -n default get svc frontend-lb-svc -o json)" = "null" ]; do
           if [ $elapsed -gt $timeout ]; then
             echo "External load balancer is not created yet, waiting time is over $timeout seconds. Continuing with deployment anyway."
             echo "Please check if the external load balancer is created. If not, create it manually."
@@ -164,6 +168,8 @@ jobs:
           app_url="http://$(kubectl -n default get svc hello-world-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
           echo "APP URL: $app_url"
         fi
+
+
         
 
     # - name: destroy cluster
