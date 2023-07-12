@@ -8,7 +8,7 @@
 #  This workflow will build and push a new container images to Amazon ECR,
 #  The container iamges are based on the following repositories:
 #  
-#  History:       19/06/2023 (Zvi Moshkoviz)
+#  History:       12/07/2023 (Zvi Moshkoviz) @zvimosh
 # Initial release
 
 # contributors: @zvimosh, @lidorg-dev
@@ -34,7 +34,8 @@
 #    Replace the value of the `my-kops-bucket` in the workflow below.
 # 3. Store your environment variables in GitHub Actions secrets named `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `KOPS_PUBLIC_KEY`, and `KOPS_PRIVATE_KEY`.
 # 4. Store your KOPS variables in Github Actions Repository Variables named `KOPS_CLUSTER_NAME`, `KOPS_PROVIDER`, `KOPS_BUCKET_STATE`, `KOPS_BUCKET_OIDC_STORE`, `KOPS_DNS_ZONE`, `KOPS_CLUSTER_ZONES`.
-# 5. Configure AWS User with the correct IAM policies to create and manage ECR repositories, and KOPS clusters, documentation in the following links:
+# 5. Store your DB_PASSWORD in Github Actions Repository Secrets named `DB_PASSWORD`, this is update the configMap.yaml file with the DB_PASSWORD.
+# 6. Configure AWS User with the correct IAM policies to create and manage ECR repositories, and KOPS clusters, documentation in the following links:
 #    https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create-permissions.html
 #    https://kops.sigs.k8s.io/getting_started/aws/
 #    https://kops.sigs.k8s.io/operations/iam_permissions/
@@ -42,9 +43,9 @@
 #    Replace the value of the `ECS_TASK_DEFINITION` environment variable in the workflow below with the path to the JSON file.
 #    Replace the value of the `CONTAINER_NAME` environment variable in the workflow below with the name of the container
 #    in the `containerDefinitions` section of the task definition.
-# 6. Setup AWS Route53 DNS zone and update the value of the `KOPS_DNS_ZONE` environment variable in the workflow below with your DNS zone, documentation in the following link:
+# 7. Setup AWS Route53 DNS zone and update the value of the `KOPS_DNS_ZONE` environment variable in the workflow below with your DNS zone, documentation in the following link:
 #    https://kops.sigs.k8s.io/getting_started/aws/
-# 7. Make sure you read the full documentation of KOPS before using this workflow, documentation in the following link:
+# 8. Make sure you read the full documentation of KOPS before using this workflow, documentation in the following link:
 #    https://kops.sigs.k8s.io/
 ### IMPORTANT ###
 #    In the event you need to destroy the cluster but you don't have access to it. You can use the following command to delete the cluster, or run the Destroy KOPS Cluster workflow.
@@ -61,8 +62,6 @@
 #    aws iam delete-user --user-name my-iam-user --force
 #    You can also use the following command to delete the AWS IAM access key.
 #    aws iam delete-access-key --access-key-id ABCDEFGHIJKLMNOPQRST --user-name my-iam-user --force
-
-
 ####################################################################################################################################################################
 name: Deploy to AWS KOPS
 
@@ -79,9 +78,9 @@ env:
   # AWS ENV
   AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
   KOPS_PROVIDER: aws
-  KOPS_BUCKET_STATE: ${{ vars.KOPS_BUCKET_OIDC_STORE }}
-  KOPS_BUCKET_OIDC_STORE: ${{vars.KOPS_BUCKET_STATE }} # not in use
-  KOPS_CLUSTER_NAME: ${{ vars.KOPS_BUCKET_STATE }}
+  KOPS_BUCKET_STATE: ${{ vars.KOPS_BUCKET_STATE }}
+  KOPS_BUCKET_OIDC_STORE: ${{ vars.KOPS_BUCKET_OIDC_STORE }} # not in use
+  KOPS_CLUSTER_NAME: ${{ vars.KOPS_CLUSTER_NAME }}
   KOPS_DNS_ZONE: ${{ vars.KOPS_DNS_ZONE }}
   KOPS_CLUSTER_ZONES: us-east-1a # set this to your preferred AWS availability zones, e.g. us-west-1a,us-west-1b,us-west-1c
   #,us-east-1b,us-east-1c  # you can specify multiple zones separated by commas if you want to create a multi-zone cluster
@@ -115,8 +114,6 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        # Get the DB password from the secrets store
-        # echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt # not in use, using configMap instead to store DB_PASSWORD, need to find a way to update configMap with github secrets
         # Build the images
         export DOCKER_REPO=$ECR_REGISTRY
         docker buildx bake --load
@@ -141,8 +138,16 @@ jobs:
         sudo snap install kubectl --classic
         # install jq
         sudo snap install jq
+        # install yq
+        sudo snap install yq
         # install helm
         sudo snap install helm --classic
+    
+    - name: Add DB_PASSWORD to ConfigMap
+      run: |
+          yq e '.data.DB_PASSWORD = strenv(DB_PASSWORD)' -i config/kube/configMap.yaml
+      env:
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     - name : create kops cluster # create kops cluster and deploy kubernetes deployment and services
       run: |
@@ -227,9 +232,9 @@ jobs:
         kubectl get no,po,svc,ing -o wide -A
         kubectl get no,po,svc,ing -o wide -A > kubernetes.txt # save kubernetes info to kubernetes.txt to be uploaded as artifact
         # check if external loab balancer is created if not then wait app until it is created or timeout
-        wait=30
+        wait=15
         elapsed=0
-        timeout=240
+        timeout=600
         
         while [ "$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer)" != "null" ]; do
           if [ $elapsed -gt $timeout ]; then
@@ -267,15 +272,15 @@ jobs:
         # update prometheus-stack services to use aws nlb instead of Cluster IP
         kubectl patch svc prometheus-stack-grafana -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
         kubectl patch svc prometheus-stack-kube-prom-alertmanager -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
-        kubectl patch svc prometheus-stack-kube-prometheus-prometheus -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
+        kubectl patch svc prometheus-stack-kube-prom-prometheus -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
         
         # get info about prometheus-stack
         kubectl get -n prometheus-stack no,po,svc,ing -o wide -A
         
         # Prometheus-stack URL  wait for the first external load balancer to be created if not then wait app until it is created or timeout
-        wait=5
+        wait=15
         elapsed=0
-        timeout=180
+        timeout=600
         
         while [ "$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer)" != "null" ]; do
 
@@ -292,8 +297,8 @@ jobs:
         done
         
         if [ $elapsed -le $timeout ] && [ $elapsed -ne $timeout ]; then
-          app_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
-          echo "APP URL: $app_url"
+        prometheus_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+          echo "APP URL: $prometheus_url"
         fi
 
         prometheus_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
@@ -302,7 +307,7 @@ jobs:
         # Alertmanager URL
         alertmanager_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-alertmanager -o json | jq -r .status.loadBalancer.ingress[].hostname)"
         # react-app URL
-        react_app_url="http://$(kubectl -n default get svc frontend-app-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        react_app_url="http://$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
         
         # get info about public url access and display in console, also save to app_url.txt to be uploaded as artifact
         echo "React App URL: $react_app_url"
