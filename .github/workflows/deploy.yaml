@@ -272,7 +272,7 @@ jobs:
         # update prometheus-stack services to use aws nlb instead of Cluster IP
         kubectl patch svc prometheus-stack-grafana -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
         kubectl patch svc prometheus-stack-kube-prom-alertmanager -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
-        kubectl patch svc prometheus-stack-kube-prometheus-prometheus -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
+        kubectl patch svc prometheus-stack-kube-prom-prometheus -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
         
         # get info about prometheus-stack
         kubectl get -n prometheus-stack no,po,svc,ing -o wide -A
