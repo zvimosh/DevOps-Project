@@ -150,22 +150,22 @@ jobs:
         # apply kubernetes deployment and services 
         #kubectl apply -f config/kube/tests/hello-world.yaml # not in use, this is a test deployment
 
-        kubectl apply -f config/kube/tests/configMap.yaml
-        kubectl apply -f config/kube/tests/mariadb.yaml
+        kubectl apply -f config/kube/configMap.yaml
+        kubectl apply -f config/kube/mariadb.yaml
         
         sleep 10 # give time for mariadb to be ready before deploying frontend app
-        kubectl apply -f config/kube/tests/react-app.yaml
+        kubectl apply -f config/kube/eact-app.yaml
         
   
         # Get all
         kubectl get no,po,svc,ing -o wide -A
         kubectl get no,po,svc,ing -o wide -A > kubernetes.txt # save kubernetes info to kubernetes.txt to be uploaded as artifact
         # check if external loab balancer is created if not then wait app until it is created or timeout
-        wait=5
+        wait=30
         elapsed=0
-        timeout=180
+        timeout=240
         
-        while [ "$(kubectl -n default get svc frontend-lb-svc -o json)" = "null" ]; do
+        while [ "$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer)" != "null" ]; do
           if [ $elapsed -gt $timeout ]; then
             echo "External load balancer is not created yet, waiting time is over $timeout seconds. Continuing with deployment anyway."
             echo "Please check if the external load balancer is created. If not, create it manually."
@@ -211,7 +211,8 @@ jobs:
         elapsed=0
         timeout=180
         
-        while [ "$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json)" = "null" ]; do
+        while [ "$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer)" != "null" ]; do
+
           if [ $elapsed -gt $timeout ]; then
             echo "External load balancer is not created yet, waiting time is over $timeout seconds. Continuing with deployment anyway."
             echo "Please check if the external load balancer is created. If not, create it manually."
