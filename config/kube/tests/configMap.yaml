@@ -6,4 +6,5 @@ data:
   DB_HOST: mariadb-service
   DB_PORT: "3306"
   DB_USER: admin
-  DB_PASSWORD: admin
+  DB_PASSWORD: db-57xsl
+  db: mariadb-service

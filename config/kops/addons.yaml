@@ -1,0 +1,5 @@
+  certManager:
+    enabled: true
+  metricsServer:
+    enabled: true
+    insecure: false

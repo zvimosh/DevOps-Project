@@ -1,5 +1,44 @@
+####################################################################################################################################################################
+#  Workflow name:   Deploy to AWS KOPS
+#  Created on:    12/07/2023
+#  Author:        Zvi Moshkoviz, @zvimosh
+#  Important Notes: This workflow was created as a part of DevOps Course and is not intended to be used in production environment.
+#
+#  Purpose:       
+#  This workflow will build and push a new container images to Amazon ECR,
+#  The container iamges are based on the following repositories:
+#  
+#  History:       19/06/2023 (Zvi Moshkoviz)
+# Initial release
 
-name: Deploy
+# contributors: @zvimosh, @lidorg-dev
+# the Docker images are based on the following repositories:
+# https://github.com/lidorg-dev/react-java0mysql by @lidorg-dev
+
+# This workflow will build and push new container images (backend, frontend) to Amazon ECR,
+# Deploy a kubernetes cluster using kops on AWS,
+# Deploy kubernetes deployment and services,
+# Deploy mariadb on kubernetes cluster,
+# Deploy prometheus-stack on kubernetes cluster,
+# Deploy react app on kubernetes cluster,
+# 
+#
+# 1. Create an ECR repository to store your images.
+#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-2`.
+#    Replace the value of the `ECR_REPOSITORY` environment variable in the workflow below with your repository's name.
+#    Replace the value of the `AWS_REGION` environment variable in the workflow below with your repository's region.
+#
+# 3. Store your ECS task definition as a JSON file in your repository.
+#    The format should follow the output of `aws ecs register-task-definition --generate-cli-skeleton`.
+#    Replace the value of the `ECS_TASK_DEFINITION` environment variable in the workflow below with the path to the JSON file.
+#    Replace the value of the `CONTAINER_NAME` environment variable in the workflow below with the name of the container
+#    in the `containerDefinitions` section of the task definition.
+#
+# 4. Store an IAM user access key in GitHub Actions secrets named `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+#    See the documentation for each action used below for the recommended IAM policies for this IAM user,
+#    and best practices on handling the access key credentials.
+####################################################################################################################################################################
+name: Deploy to AWS KOPS
 
 on:
   #push:
@@ -15,17 +54,17 @@ env:
   AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
   KOPS_PROVIDER: aws
   KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
-  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
+  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store # not in use
   KOPS_CLUSTER_NAME: kops.foxyandpuff.com
   KOPS_DNS_ZONE: kops.foxyandpuff.com
-  KOPS_CLUSTER_ZONES: us-east-1a 
-  #,us-east-1b,us-east-1c
-  KOPS_MASTER_INSTANCE_SIZE: t3.large
-  KOPS_NODE_INSTANCE_SIZE: t3.large
-  KOPS_NODE_COUNT: 1
+  KOPS_CLUSTER_ZONES: us-east-1a # set this to your preferred AWS availability zones, e.g. us-west-1a,us-west-1b,us-west-1c
+  #,us-east-1b,us-east-1c  # you can specify multiple zones separated by commas if you want to create a multi-zone cluster
+  KOPS_MASTER_INSTANCE_SIZE: t3.large # set this to your preferred master node instance size, e.g. t3.large
+  KOPS_NODE_INSTANCE_SIZE: t3.xlarge # set this to your preferred node instance size, e.g. t3.xlarge , prometheus-stack requires t3.xlarge
+  KOPS_NODE_COUNT: 2 # set this to your preferred node count, e.g. 2
 
 permissions:
-  contents: read
+  contents: read # needed to read files in the repository
 
 jobs:
   deploy:
@@ -34,8 +73,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+    - name: Configure AWS credentials 
+      uses: aws-actions/configure-aws-credentials@v2 
       with:
         aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
@@ -45,28 +84,27 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
+    - name: Build, tag, and push image to Amazon ECR # replace with your own image details
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
         # Get the DB password from the secrets store
-        echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt
+        # echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt # not in use, using configMap instead to store DB_PASSWORD, need to find a way to update configMap with github secrets
         # Build the images
         export DOCKER_REPO=$ECR_REGISTRY
         docker buildx bake --load
-        docker push $ECR_REGISTRY/react-backend:1.0.0
+        #docker push $ECR_REGISTRY/react-backend:${{ github.sha }}
         docker push $ECR_REGISTRY/react-backend:latest
-        docker push $ECR_REGISTRY/react-frontend:1.0.0
+        #docker push $ECR_REGISTRY/react-frontend:${{ github.sha }}
         docker push $ECR_REGISTRY/react-frontend:latest
-        #echo "$GITHUB_OUTPUT"
     
     - name: export aws
       run: |
         export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
         export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 
-    - name: install dependencies
+    - name: install dependencies # install kops, kubectl, jq, helm
       run: |
         # install kops
         sudo apt-get update
@@ -75,11 +113,14 @@ jobs:
         sudo mv kops /usr/local/bin/kops
         # install kubectl   
         sudo snap install kubectl --classic
+        # install jq
         sudo snap install jq
+        # install helm
+        sudo snap install helm --classic
 
-    - name : create kops cluster
+    - name : create kops cluster # create kops cluster and deploy kubernetes deployment and services
       run: |
-        # export KOPS env variables
+        # export KOPS env variables 
         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
         export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
@@ -90,42 +131,52 @@ jobs:
         export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
-        # insert public key
+        # insert public key and private key into ~/.ssh/id_rsa.pub and ~/.ssh/id_rsa from github secrets
         mkdir -p ~/.ssh
         echo "${{ secrets.KOPS_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
         echo "${{ secrets.KOPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa.pub
 
-        # create kops cluster
+        # create kops cluster 
         #kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --dns-zone=${KOPS_DNS_ZONE} --discovery-store=${KOPS_DISCOVERY_STORE}/${NAME}/discovery --yes -o yaml > clusterspec.yaml
-        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE  --yes
+        kops create cluster --name ${KOPS_CLUSTER_NAME} --cloud=$KOPS_PROVIDER --state ${KOPS_STATE_STORE} --zones ${KOPS_CLUSTER_ZONES} --node-count=$KOPS_NODE_COUNT --node-size=$KOPS_NODE_INSTANCE_SIZE --master-size=$KOPS_MASTER_INSTANCE_SIZE --ssh-public-key=~/.ssh/id_rsa.pub  --yes
         kops update cluster --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --yes --admin
         kops validate cluster --state ${KOPS_STATE_STORE} --wait 10m
-        # get kops cluster spec
+        
+        # get kops cluster spec # needed to add additionalPolicies to kops cluster spec file
         kops get cluster --name ${KOPS_CLUSTER_NAME} -o yaml > clusterspec.yaml
+        
+        # fix kops error deploying ingress nginx controller because of permission issue #
         # add additionalPolicies to kops cluster spec file from additionalPolicies.yaml under spec: additionalPolicies:
         for f in config/kops/additionalPolicies.yaml; do   cat $f >> clusterspec.yaml; done
-        # replace kops cluster spec
-        kops replace -f clusterspec.yaml
-        # update kops cluster
-        kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
-        # export kops kubeconfig
-        kops export kubecfg --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/kops-kube-config
-        # Wait for cluster to be ready
-        echo "Waiting for cluster to be ready... (60 seconds)"
-        sleep 60
         
-        # Get all
+        # replace kops cluster spec with updated spec file with additionalPolicies added
+        kops replace -f clusterspec.yaml
+        
+        #kops create sshpublickey -i ~/.ssh/id_rsa.pub # not in use, using --ssh-public-key instead
+        
+        # update kops cluster with additionalPolicies
+        kops update cluster --name ${KOPS_CLUSTER_NAME} --yes --admin
+        
+        # export kops kubeconfig to ~/.kube/kops-kube-config to be uploaded as artifact
+        kops export kubecfg --name ${KOPS_CLUSTER_NAME} --state ${KOPS_STATE_STORE} --kubeconfig ~/.kube/kops-kube-config 
+        
+        # Wait for cluster to be ready before deploying kubernetes deployment and services
+        echo "Waiting for cluster to be ready... (10 seconds)"
+        sleep 10
+        
+        # Get all 
         kubectl get no,po,svc,ing -o wide -A
 
-        # Apply Ingress Nginx deployment
+        # Apply Ingress Nginx deployment for kubernetes cluster 
         # download Ingress Nginx deployment yaml
         curl https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml -o config/kube/deploy.yaml
         kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.0/deploy/static/provider/aws/deploy.yaml
+
     - name: apply kubernetes deployment
       run: |
-        # export KOPS env variables
+        # export KOPS env variables # not sure if needed here since it is already exported above
         export KOPS_CLUSTER_NAME=${{ env.KOPS_CLUSTER_NAME }}
         export KOPS_PROVIDER=${{ env.KOPS_PROVIDER }}
         export KOPS_STATE_STORE=s3://${{ env.KOPS_BUCKET_STATE }}
@@ -136,18 +187,25 @@ jobs:
         export KOPS_NODE_INSTANCE_SIZE=${{ env.KOPS_NODE_INSTANCE_SIZE }}
         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
 
-        # apply kubernetes deployment
-        kubectl apply -f config/kube/hello-world.yaml
+        # apply kubernetes deployment and services 
+        #kubectl apply -f config/kube/tests/hello-world.yaml # not in use, this is a test deployment
+
+        kubectl apply -f config/kube/configMap.yaml
+        kubectl apply -f config/kube/mariadb.yaml
+        
+        sleep 10 # give time for mariadb to be ready before deploying frontend app
+        kubectl apply -f config/kube/react-app.yaml
+        
   
         # Get all
         kubectl get no,po,svc,ing -o wide -A
-        kubectl get no,po,svc,ing -o wide -A > kubernetes.txt
+        kubectl get no,po,svc,ing -o wide -A > kubernetes.txt # save kubernetes info to kubernetes.txt to be uploaded as artifact
         # check if external loab balancer is created if not then wait app until it is created or timeout
-        wait=5
+        wait=30
         elapsed=0
-        timeout=180
+        timeout=240
         
-        while [ "$(kubectl -n default get svc hello-world-lb-svc -o json)" = "null" ]; do
+        while [ "$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer)" != "null" ]; do
           if [ $elapsed -gt $timeout ]; then
             echo "External load balancer is not created yet, waiting time is over $timeout seconds. Continuing with deployment anyway."
             echo "Please check if the external load balancer is created. If not, create it manually."
@@ -161,12 +219,96 @@ jobs:
         done
         
         if [ $elapsed -le $timeout ] && [ $elapsed -ne $timeout ]; then
-          app_url="http://$(kubectl -n default get svc hello-world-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+          app_url="http://$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
           echo "APP URL: $app_url"
         fi
         
+        # deploy prometheus-stack
+        # download prometheus-stack deployment yaml
+        curl https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml -o config/kube/prometheus-stack/values.yaml
+        
+        # install prometheus-stack
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm repo update
+        
+        # update to use aws nlb for prometheus-stack instead of Cluster IP (replace type: ClusterIP with type: LoadBalancer) # not in use, using patch svc instead
+        #sed -i 's/type: ClusterIP/type: LoadBalancer/g' config/kube/prometheus-stack/values.yaml
+        
+        # create prometheus-stack namespace and install prometheus-stack
+        kubectl create ns prometheus-stack
+        helm install prometheus-stack prometheus-community/kube-prometheus-stack -f config/kube/prometheus-stack/values.yaml -n prometheus-stack
+        
+        # update prometheus-stack services to use aws nlb instead of Cluster IP
+        kubectl patch svc prometheus-stack-grafana -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
+        kubectl patch svc prometheus-stack-kube-prom-alertmanager -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
+        kubectl patch svc prometheus-stack-kube-prometheus-prometheus -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
+        
+        # get info about prometheus-stack
+        kubectl get -n prometheus-stack no,po,svc,ing -o wide -A
+        
+        # Prometheus-stack URL  wait for the first external load balancer to be created if not then wait app until it is created or timeout
+        wait=5
+        elapsed=0
+        timeout=180
+        
+        while [ "$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer)" != "null" ]; do
 
-    # - name: destroy cluster
+          if [ $elapsed -gt $timeout ]; then
+            echo "External load balancer is not created yet, waiting time is over $timeout seconds. Continuing with deployment anyway."
+            echo "Please check if the external load balancer is created. If not, create it manually."
+            break
+          fi
+        
+          echo "External load balancer is not created yet."
+          echo "Waiting for external load balancer to be created... (${elapsed} seconds)"
+          sleep $wait
+          elapsed=$((elapsed + wait))
+        done
+        
+        if [ $elapsed -le $timeout ] && [ $elapsed -ne $timeout ]; then
+          app_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+          echo "APP URL: $app_url"
+        fi
+
+        prometheus_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        # Grafana URL
+        grafana_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-grafana -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        # Alertmanager URL
+        alertmanager_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-alertmanager -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        # react-app URL
+        react_app_url="http://$(kubectl -n default get svc frontend-app-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        
+        # get info about public url access and display in console, also save to app_url.txt to be uploaded as artifact
+        echo "React App URL: $react_app_url"
+        echo "Prometheus URL: $prometheus_url"
+        echo "Grafana URL: $grafana_url"
+        echo "Alertmanager URL: $alertmanager_url"
+        echo "React App URL: $react_app_url" > app_url.txt
+        echo "Prometheus URL: $prometheus_url" >> app_url.txt
+        echo "Grafana URL: $grafana_url" >> app_url.txt
+        echo "Alertmanager URL: $alertmanager_url" >> app_url.txt
+
+        # get grafana admin password and username and display in console, also save to grafana.txt to be uploaded as artifact
+        kubectl get secret --namespace prometheus-stack prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+        kubectl get secret --namespace prometheus-stack prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo > grafana.txt
+        # get grafana admin username
+        kubectl get secret --namespace prometheus-stack prometheus-stack-grafana -o jsonpath="{.data.admin-user}" | base64 --decode ; echo
+        kubectl get secret --namespace prometheus-stack prometheus-stack-grafana -o jsonpath="{.data.admin-user}" | base64 --decode ; echo >> grafana.txt
+        
+    - name: get deployment config and upload as artifact # get deployment config and upload as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: config
+        path: |
+          ~/.kube/kops-kube-config
+          clusterspec.yaml
+          kubernetes.txt
+          grafana.txt
+          app_url.txt
+
+        
+
+    # - name: destroy cluster # not in use, using a separate workflow to destroy cluster
     #   if: failure()
     #   run: |
     #         # export KOPS env variables
@@ -181,24 +323,6 @@ jobs:
     #         export KOPS_NODE_COUNT=${{ env.KOPS_NODE_COUNT }}
     #         # delete kops cluster
     #         kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
-
-    - name: get kube config
-      uses: actions/upload-artifact@v3
-      with:
-        name: config
-        path: ~/.kube/kops-kube-config
-
-    - name: get kops clusterspec
-      uses: actions/upload-artifact@v3
-      with:
-        name: clusterspec
-        path: clusterspec.yaml
-
-    - name: get kube status
-      uses: actions/upload-artifact@v3
-      with:
-        name: kubernetes
-        path: kubernetes.txt
 
 
 

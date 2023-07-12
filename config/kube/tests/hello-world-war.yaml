@@ -5,24 +5,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-world-deployment
+  name: hello-world-war-deployment
   labels:
-    app: hello-world
+    app: hello-world-war
 spec:
   selector:
     matchLabels:
-      app: hello-world
+      app: hello-world-war
   replicas: 2
   template:
     metadata:
       labels:
-        app: hello-world
+        app: hello-world-war
     spec:
       containers:
       - name: hello-world
-        image: bhargavshah86/kube-test:v0.1
+        image: 865796477738.dkr.ecr.us-east-1.amazonaws.com/hello-world-war
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         resources:
           limits:
             memory: 256Mi
@@ -34,23 +34,23 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: hello-world-nodeport
+  name: hello-world-war-nodeport
 spec:
   selector:
-    app: hello-world
+    app: hello-world-war
   ports:
   - protocol: TCP
-    port: 80
-    targetPort: 80
-    nodePort: 30081
+    port: 8080
+    targetPort: 8080
+    nodePort: 30099
   type: NodePort
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: hello-world-lb-svc
+  name: hello-world-war-lb-svc
   labels:
-    app: hello-world
+    app: hello-world-war
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
 spec:
@@ -61,4 +61,4 @@ spec:
   - name: https
     port: 443
   selector:
-    app: hello-world
+    app: hello-world-war
