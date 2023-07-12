@@ -1,5 +1,5 @@
 
-name: Docker
+name: Deploy Docker App to ECR
 
 on:
   #push:
