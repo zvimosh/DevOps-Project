@@ -21,11 +21,13 @@
 # Deploy mariadb on kubernetes cluster,
 # Deploy prometheus-stack on kubernetes cluster,
 # Deploy react app on kubernetes cluster,
-# 
+# Export Important deplyoment info and configuration to be uploaded as artifact,
+
+# Important Notes: To use this workflow, you will need to complete the following setup steps first to setup your AWS account, ECR repository, and KOPS prerequisites:
 #
 # 1. Create an ECR repository to store your images.
-#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-2`.
-#    Replace the value of the `ECR_REPOSITORY` environment variable in the workflow below with your repository's name.
+#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-1`.
+#    Replace the value of the `my-ecr-repo` in the build-image step.
 #    Replace the value of the `AWS_REGION` environment variable in the workflow below with your repository's region.
 #
 # 3. Store your ECS task definition as a JSON file in your repository.
@@ -225,18 +227,18 @@ jobs:
         
         # deploy prometheus-stack
         # download prometheus-stack deployment yaml
-        curl https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml -o config/kube/prometheus-stack/values.yaml
+        curl https://raw.githubusercontent.com/prometheus-community/helm-charts/main/charts/kube-prometheus-stack/values.yaml -o config/kube/values.yaml
         
         # install prometheus-stack
         helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
         helm repo update
         
         # update to use aws nlb for prometheus-stack instead of Cluster IP (replace type: ClusterIP with type: LoadBalancer) # not in use, using patch svc instead
-        #sed -i 's/type: ClusterIP/type: LoadBalancer/g' config/kube/prometheus-stack/values.yaml
+        #sed -i 's/type: ClusterIP/type: LoadBalancer/g' config/kube/values.yaml
         
         # create prometheus-stack namespace and install prometheus-stack
         kubectl create ns prometheus-stack
-        helm install prometheus-stack prometheus-community/kube-prometheus-stack -f config/kube/prometheus-stack/values.yaml -n prometheus-stack
+        helm install prometheus-stack prometheus-community/kube-prometheus-stack -f config/kube/values.yaml -n prometheus-stack
         
         # update prometheus-stack services to use aws nlb instead of Cluster IP
         kubectl patch svc prometheus-stack-grafana -p '{"spec": {"type": "LoadBalancer"}}' -n prometheus-stack
