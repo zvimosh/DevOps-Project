@@ -297,8 +297,8 @@ jobs:
         done
         
         if [ $elapsed -le $timeout ] && [ $elapsed -ne $timeout ]; then
-          app_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
-          echo "APP URL: $app_url"
+        prometheus_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+          echo "APP URL: $prometheus_url"
         fi
 
         prometheus_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer.ingress[].hostname)"
@@ -307,7 +307,7 @@ jobs:
         # Alertmanager URL
         alertmanager_url="http://$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-alertmanager -o json | jq -r .status.loadBalancer.ingress[].hostname)"
         # react-app URL
-        react_app_url="http://$(kubectl -n default get svc frontend-app-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
+        react_app_url="http://$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer.ingress[].hostname)"
         
         # get info about public url access and display in console, also save to app_url.txt to be uploaded as artifact
         echo "React App URL: $react_app_url"
