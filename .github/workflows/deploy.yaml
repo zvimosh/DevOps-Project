@@ -1,4 +1,44 @@
-name: Deploy
+####################################################################################################################################################################
+#  Workflow name:   Deploy to AWS KOPS
+#  Created on:    12/07/2023
+#  Author:        Zvi Moshkoviz, @zvimosh
+#  Important Notes: This workflow was created as a part of DevOps Course and is not intended to be used in production environment.
+#
+#  Purpose:       
+#  This workflow will build and push a new container images to Amazon ECR,
+#  The container iamges are based on the following repositories:
+#  
+#  History:       19/06/2023 (Zvi Moshkoviz)
+# Initial release
+
+# contributors: @zvimosh, @lidorg-dev
+# the Docker images are based on the following repositories:
+# https://github.com/lidorg-dev/react-java0mysql by @lidorg-dev
+
+# This workflow will build and push new container images (backend, frontend) to Amazon ECR,
+# Deploy a kubernetes cluster using kops on AWS,
+# Deploy kubernetes deployment and services,
+# Deploy mariadb on kubernetes cluster,
+# Deploy prometheus-stack on kubernetes cluster,
+# Deploy react app on kubernetes cluster,
+# 
+#
+# 1. Create an ECR repository to store your images.
+#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-2`.
+#    Replace the value of the `ECR_REPOSITORY` environment variable in the workflow below with your repository's name.
+#    Replace the value of the `AWS_REGION` environment variable in the workflow below with your repository's region.
+#
+# 3. Store your ECS task definition as a JSON file in your repository.
+#    The format should follow the output of `aws ecs register-task-definition --generate-cli-skeleton`.
+#    Replace the value of the `ECS_TASK_DEFINITION` environment variable in the workflow below with the path to the JSON file.
+#    Replace the value of the `CONTAINER_NAME` environment variable in the workflow below with the name of the container
+#    in the `containerDefinitions` section of the task definition.
+#
+# 4. Store an IAM user access key in GitHub Actions secrets named `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+#    See the documentation for each action used below for the recommended IAM policies for this IAM user,
+#    and best practices on handling the access key credentials.
+####################################################################################################################################################################
+name: Deploy to AWS KOPS
 
 on:
   #push:
@@ -154,7 +194,7 @@ jobs:
         kubectl apply -f config/kube/mariadb.yaml
         
         sleep 10 # give time for mariadb to be ready before deploying frontend app
-        kubectl apply -f config/kube/eact-app.yaml
+        kubectl apply -f config/kube/react-app.yaml
         
   
         # Get all
