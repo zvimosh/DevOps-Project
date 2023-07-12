@@ -1,5 +1,5 @@
 
-name: Destroy
+name: Destroy KOPS Cluster
 on:
   #push:
   #  branches: ["dev"]
@@ -10,14 +10,17 @@ on:
   workflow_dispatch:
 
 env:
-  # AWS ENV
   AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
   KOPS_PROVIDER: aws
-  KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
-  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store
-  KOPS_CLUSTER_NAME: kops.foxyandpuff.com
-  KOPS_DNS_ZONE: kops.foxyandpuff.com
-  KOPS_CLUSTER_ZONES: us-east-1a #,us-east-1b,us-east-1c
+  KOPS_BUCKET_STATE: ${{ vars.KOPS_BUCKET_OIDC_STORE }}
+  KOPS_BUCKET_OIDC_STORE: ${{vars.KOPS_BUCKET_STATE }} # not in use
+  KOPS_CLUSTER_NAME: ${{ vars.KOPS_BUCKET_STATE }}
+  KOPS_DNS_ZONE: ${{ vars.KOPS_DNS_ZONE }}
+  KOPS_CLUSTER_ZONES: us-east-1a # set this to your preferred AWS availability zones, e.g. us-west-1a,us-west-1b,us-west-1c
+  #,us-east-1b,us-east-1c  # you can specify multiple zones separated by commas if you want to create a multi-zone cluster
+  KOPS_MASTER_INSTANCE_SIZE: t3.large # set this to your preferred master node instance size, e.g. t3.large
+  KOPS_NODE_INSTANCE_SIZE: t3.xlarge # set this to your preferred node instance size, e.g. t3.xlarge , prometheus-stack requires t3.xlarge
+  KOPS_NODE_COUNT: 2 # set this to your preferred node count, e.g. 2
 
 permissions:
   contents: read

@@ -26,19 +26,43 @@
 # Important Notes: To use this workflow, you will need to complete the following setup steps first to setup your AWS account, ECR repository, and KOPS prerequisites:
 #
 # 1. Create an ECR repository to store your images.
-#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-1`.
+#    For example: `aws ecr create-repository --repository-name my-ecr-repo --region us-east-1`. do this for each image you want to create.
 #    Replace the value of the `my-ecr-repo` in the build-image step.
 #    Replace the value of the `AWS_REGION` environment variable in the workflow below with your repository's region.
-#
-# 3. Store your ECS task definition as a JSON file in your repository.
+# 2. Create a KOPS S3 bucket to store your cluster state.
+#    For example: `aws s3api create-bucket --bucket my-kops-bucket --region us-east-1`.
+#    Replace the value of the `my-kops-bucket` in the workflow below.
+# 3. Store your environment variables in GitHub Actions secrets named `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `KOPS_PUBLIC_KEY`, and `KOPS_PRIVATE_KEY`.
+# 4. Store your KOPS variables in Github Actions Repository Variables named `KOPS_CLUSTER_NAME`, `KOPS_PROVIDER`, `KOPS_BUCKET_STATE`, `KOPS_BUCKET_OIDC_STORE`, `KOPS_DNS_ZONE`, `KOPS_CLUSTER_ZONES`.
+# 5. Configure AWS User with the correct IAM policies to create and manage ECR repositories, and KOPS clusters, documentation in the following links:
+#    https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create-permissions.html
+#    https://kops.sigs.k8s.io/getting_started/aws/
+#    https://kops.sigs.k8s.io/operations/iam_permissions/
 #    The format should follow the output of `aws ecs register-task-definition --generate-cli-skeleton`.
 #    Replace the value of the `ECS_TASK_DEFINITION` environment variable in the workflow below with the path to the JSON file.
 #    Replace the value of the `CONTAINER_NAME` environment variable in the workflow below with the name of the container
 #    in the `containerDefinitions` section of the task definition.
-#
-# 4. Store an IAM user access key in GitHub Actions secrets named `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-#    See the documentation for each action used below for the recommended IAM policies for this IAM user,
-#    and best practices on handling the access key credentials.
+# 6. Setup AWS Route53 DNS zone and update the value of the `KOPS_DNS_ZONE` environment variable in the workflow below with your DNS zone, documentation in the following link:
+#    https://kops.sigs.k8s.io/getting_started/aws/
+# 7. Make sure you read the full documentation of KOPS before using this workflow, documentation in the following link:
+#    https://kops.sigs.k8s.io/
+### IMPORTANT ###
+#    In the event you need to destroy the cluster but you don't have access to it. You can use the following command to delete the cluster, or run the Destroy KOPS Cluster workflow.
+#    kops delete cluster --name ${KOPS_CLUSTER_NAME} --yes
+
+#    You can also use the following command to delete the ECR repository.
+
+#    aws ecr delete-repository --repository-name my-ecr-repo --region us-east-1 --force
+#    You can also use the following command to delete the S3 bucket.
+#    aws s3api delete-bucket --bucket my-kops-bucket --region us-east-1 --force
+#    You can also use the following command to delete the Route53 DNS zone.
+#    aws route53 delete-hosted-zone --id Z1234567890 --force
+#    You can also use the following command to delete the AWS IAM user.
+#    aws iam delete-user --user-name my-iam-user --force
+#    You can also use the following command to delete the AWS IAM access key.
+#    aws iam delete-access-key --access-key-id ABCDEFGHIJKLMNOPQRST --user-name my-iam-user --force
+
+
 ####################################################################################################################################################################
 name: Deploy to AWS KOPS
 
@@ -55,10 +79,10 @@ env:
   # AWS ENV
   AWS_REGION: us-east-1 # set this to your preferred AWS region, e.g. us-west-1
   KOPS_PROVIDER: aws
-  KOPS_BUCKET_STATE: kops-foxyandpuff-com-cluster-state
-  KOPS_BUCKET_OIDC_STORE: kops-foxyandpuff-com-cluster-oidc-store # not in use
-  KOPS_CLUSTER_NAME: kops.foxyandpuff.com
-  KOPS_DNS_ZONE: kops.foxyandpuff.com
+  KOPS_BUCKET_STATE: ${{ vars.KOPS_BUCKET_OIDC_STORE }}
+  KOPS_BUCKET_OIDC_STORE: ${{vars.KOPS_BUCKET_STATE }} # not in use
+  KOPS_CLUSTER_NAME: ${{ vars.KOPS_BUCKET_STATE }}
+  KOPS_DNS_ZONE: ${{ vars.KOPS_DNS_ZONE }}
   KOPS_CLUSTER_ZONES: us-east-1a # set this to your preferred AWS availability zones, e.g. us-west-1a,us-west-1b,us-west-1c
   #,us-east-1b,us-east-1c  # you can specify multiple zones separated by commas if you want to create a multi-zone cluster
   KOPS_MASTER_INSTANCE_SIZE: t3.large # set this to your preferred master node instance size, e.g. t3.large
