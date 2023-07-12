@@ -62,9 +62,12 @@ aws s3api delete-bucket --bucket my-kops-bucket --region us-east-1 --force
 aws route53 delete-hosted-zone --id Z1234567890 --force
 aws iam delete-user --user-name my-iam-user --force
 aws iam delete-access-key --access-key-id ABCDEFGHIJKLMNOPQRST --user-name my-iam-user --force
-
+```
 
 ## Authors
+
 @zvimosh
-# History
+
+### History
+
 12/07/2023/ Initial release by @zvimosh
