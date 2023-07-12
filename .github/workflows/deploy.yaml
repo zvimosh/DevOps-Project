@@ -34,7 +34,8 @@
 #    Replace the value of the `my-kops-bucket` in the workflow below.
 # 3. Store your environment variables in GitHub Actions secrets named `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `KOPS_PUBLIC_KEY`, and `KOPS_PRIVATE_KEY`.
 # 4. Store your KOPS variables in Github Actions Repository Variables named `KOPS_CLUSTER_NAME`, `KOPS_PROVIDER`, `KOPS_BUCKET_STATE`, `KOPS_BUCKET_OIDC_STORE`, `KOPS_DNS_ZONE`, `KOPS_CLUSTER_ZONES`.
-# 5. Configure AWS User with the correct IAM policies to create and manage ECR repositories, and KOPS clusters, documentation in the following links:
+# 5. Store your DB_PASSWORD in Github Actions Repository Secrets named `DB_PASSWORD`, this is update the configMap.yaml file with the DB_PASSWORD.
+# 6. Configure AWS User with the correct IAM policies to create and manage ECR repositories, and KOPS clusters, documentation in the following links:
 #    https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-create-permissions.html
 #    https://kops.sigs.k8s.io/getting_started/aws/
 #    https://kops.sigs.k8s.io/operations/iam_permissions/
@@ -42,9 +43,9 @@
 #    Replace the value of the `ECS_TASK_DEFINITION` environment variable in the workflow below with the path to the JSON file.
 #    Replace the value of the `CONTAINER_NAME` environment variable in the workflow below with the name of the container
 #    in the `containerDefinitions` section of the task definition.
-# 6. Setup AWS Route53 DNS zone and update the value of the `KOPS_DNS_ZONE` environment variable in the workflow below with your DNS zone, documentation in the following link:
+# 7. Setup AWS Route53 DNS zone and update the value of the `KOPS_DNS_ZONE` environment variable in the workflow below with your DNS zone, documentation in the following link:
 #    https://kops.sigs.k8s.io/getting_started/aws/
-# 7. Make sure you read the full documentation of KOPS before using this workflow, documentation in the following link:
+# 8. Make sure you read the full documentation of KOPS before using this workflow, documentation in the following link:
 #    https://kops.sigs.k8s.io/
 ### IMPORTANT ###
 #    In the event you need to destroy the cluster but you don't have access to it. You can use the following command to delete the cluster, or run the Destroy KOPS Cluster workflow.
@@ -61,8 +62,6 @@
 #    aws iam delete-user --user-name my-iam-user --force
 #    You can also use the following command to delete the AWS IAM access key.
 #    aws iam delete-access-key --access-key-id ABCDEFGHIJKLMNOPQRST --user-name my-iam-user --force
-
-
 ####################################################################################################################################################################
 name: Deploy to AWS KOPS
 
@@ -115,8 +114,6 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
-        # Get the DB password from the secrets store
-        # echo ${{ secrets.DB_PASSWORD }} > ./db/password.txt # not in use, using configMap instead to store DB_PASSWORD, need to find a way to update configMap with github secrets
         # Build the images
         export DOCKER_REPO=$ECR_REGISTRY
         docker buildx bake --load
@@ -141,8 +138,16 @@ jobs:
         sudo snap install kubectl --classic
         # install jq
         sudo snap install jq
+        # install yq
+        sudo snap install yq
         # install helm
         sudo snap install helm --classic
+    
+    - name: Add DB_PASSWORD to ConfigMap
+      run: |
+          yq e '.data.DB_PASSWORD = strenv(DB_PASSWORD)' -i config/kube/configMap.yaml
+      env:
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     - name : create kops cluster # create kops cluster and deploy kubernetes deployment and services
       run: |
