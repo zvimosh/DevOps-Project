@@ -232,9 +232,9 @@ jobs:
         kubectl get no,po,svc,ing -o wide -A
         kubectl get no,po,svc,ing -o wide -A > kubernetes.txt # save kubernetes info to kubernetes.txt to be uploaded as artifact
         # check if external loab balancer is created if not then wait app until it is created or timeout
-        wait=30
+        wait=15
         elapsed=0
-        timeout=240
+        timeout=600
         
         while [ "$(kubectl -n default get svc frontend-lb-svc -o json | jq -r .status.loadBalancer)" != "null" ]; do
           if [ $elapsed -gt $timeout ]; then
@@ -278,9 +278,9 @@ jobs:
         kubectl get -n prometheus-stack no,po,svc,ing -o wide -A
         
         # Prometheus-stack URL  wait for the first external load balancer to be created if not then wait app until it is created or timeout
-        wait=5
+        wait=15
         elapsed=0
-        timeout=180
+        timeout=600
         
         while [ "$(kubectl -n prometheus-stack get svc prometheus-stack-kube-prom-prometheus -o json | jq -r .status.loadBalancer)" != "null" ]; do
 
