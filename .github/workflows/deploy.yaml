@@ -8,7 +8,7 @@
 #  This workflow will build and push a new container images to Amazon ECR,
 #  The container iamges are based on the following repositories:
 #  
-#  History:       19/06/2023 (Zvi Moshkoviz)
+#  History:       12/07/2023 (Zvi Moshkoviz) @zvimosh
 # Initial release
 
 # contributors: @zvimosh, @lidorg-dev
