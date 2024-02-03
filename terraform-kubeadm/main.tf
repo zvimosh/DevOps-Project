@@ -7,8 +7,8 @@ module "cluster" {
 }
 terraform {
   backend "s3" {
-    bucket = "terraform-kube-foxyandpuff-com-state"
-    key    = "prod/state/foxyandpuff.state"
+    bucket = "terraform-kube-state"
+    key    = "prod/state/kube.state"
     region = "us-east-1"
   }
 }
